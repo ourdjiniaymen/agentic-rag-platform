@@ -123,3 +123,16 @@ Lightweight ADR-style log. Each entry: decision, alternatives considered, why.
 **Why:** v1 has no login flow (see requirements doc — "single user, no login flow required"); storing credentials or identity fields that are never read or checked is dead schema, not future-proofing. Consistent with the project's "no infra for scale we don't have" principle. When auth (Clerk) is added, `User` gets real identity columns at that point — likely aligned with whatever Clerk's user model provides, which may not even match a hand-rolled `email`/`username`/`password` shape anyway, so guessing the shape now would likely be wasted effort.
 
 ---
+
+## 012 — PDF partitioning: `hi_res` strategy, not `fast`
+
+**Decision:** Ingestion uses Unstructured's `partition_pdf(strategy="hi_res")`, which runs layout detection over rendered pages, rather than `strategy="fast"` (text-layer extraction only).
+
+**Alternatives considered:**
+- `fast`: pulls the PDF's text layer directly, no layout model. Cheaper and faster, but reading order breaks on multi-column layouts and it can't handle scanned/image-only pages at all.
+
+**Why:** `hi_res` gets reading order and element typing (Title/NarrativeText/Table/etc.) right on documents `fast` handles poorly — multi-column papers, scanned pages, mixed layouts. Chosen deliberately even though v1 doesn't require OCR/scanned-doc support, per "do ingestion correctly from the start" rather than cut a corner that would need revisiting once real documents arrive.
+
+**Trade-off accepted:** Meaningfully slower per document (layout model inference per page), which directly extends the synchronous ingestion request (decision 006) — upload will feel slower than a `fast`-strategy pipeline would. Also pulls in `unstructured-inference` (layout model weights, downloaded on first use), adding real size/first-run latency to the backend image. Accepted as the right correctness/speed trade-off for v1; revisit if synchronous upload latency becomes a real usability problem before async ingestion (Celery) is built.
+
+---
