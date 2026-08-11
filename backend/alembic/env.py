@@ -8,7 +8,7 @@ from app.db.session import Base
 
 # Import models here so they register on Base.metadata before autogenerate.
 # (empty for now - populated as models are added)
-# from app.models import project, user, document, chunk, conversation, message  # noqa
+from app.models import project, user, document, chunk, conversation, message  # noqa
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

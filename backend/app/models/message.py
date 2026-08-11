@@ -1,0 +1,36 @@
+from typing import TYPE_CHECKING, Any
+
+from sqlalchemy import ForeignKey, Text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.session import Base
+from app.models.mixins import TimestampMixin
+from app.models.enums import MessageRole
+
+if TYPE_CHECKING:
+    from app.models.conversation import Conversation
+
+
+class Message(Base, TimestampMixin):
+    """
+    `references` is a point-in-time JSON snapshot of citation metadata
+    (chunk_id, filename, file_type, file_path, start_page, end_page)
+    captured at generation time - intentionally not a normalized FK/join
+    to live chunks, so a deleted or re-chunked document can't silently
+    corrupt historical citations. See DECISIONS.md 010.
+    """
+
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(
+        ForeignKey("conversations.id"), index=True
+    )
+    role: Mapped[MessageRole] = mapped_column()
+    content: Mapped[str] = mapped_column(Text)
+    references: Mapped[list[dict[str, Any]] | None] = mapped_column(
+        JSONB, nullable=True
+    )
+
+    conversation: Mapped["Conversation"] = relationship(back_populates="messages")
