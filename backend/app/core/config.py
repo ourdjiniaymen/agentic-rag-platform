@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     chat_model: str = "gpt-4o"
     embedding_batch_size: int = 100
 
+    # Retrieval (services/retrieval.py). v1-global; per-project override
+    # is a later-version feature once Project settings actually exist.
+    retrieval_top_k: int = 5
+    # Cosine SIMILARITY floor (not distance) - a chunk must be at least
+    # this similar to be kept, even if it's within the top_k nearest.
+    retrieval_similarity_threshold: float = 0.4
+
     storage_root: str = "/app/storage"
 
     # v1 has no auth/login (DECISIONS.md 011) - every row still needs a

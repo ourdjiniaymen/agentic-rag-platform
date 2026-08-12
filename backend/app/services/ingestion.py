@@ -4,10 +4,10 @@ from unstructured.documents.elements import Element
 from unstructured.partition.pdf import partition_pdf
 
 from app.core.config import settings
-from app.core.openai_client import client
 from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.enums import DocumentStatus
+from app.services.embeddings import embed_texts
 import logging
 
 logger = logging.getLogger(__name__)
@@ -67,33 +67,6 @@ def _page_range(chunk: Element) -> tuple[int, int]:
     return (min(pages), max(pages))
 
 
-def _embed_texts(texts: list[str]) -> list[list[float]]:
-    """
-    Batches embedding calls per settings.embedding_batch_size rather than
-    one call per chunk (fewer round trips) or one call for the whole
-    document (risks per-request token limits on large PDFs).
-
-    OpenAI's embeddings response is documented to preserve input order,
-    but each returned object also carries its own `index` - we sort on
-    it explicitly rather than trust ordering implicitly, since silently
-    mismatching a chunk to the wrong embedding is a correctness bug that
-    would be very hard to notice later.
-    """
-    all_embeddings: list[list[float]] = []
-    batch_size = settings.embedding_batch_size
-
-    for start in range(0, len(texts), batch_size):
-        batch = texts[start : start + batch_size]
-        response = client.embeddings.create(
-            model=settings.embedding_model,
-            input=batch,
-        )
-        sorted_data = sorted(response.data, key=lambda d: d.index)
-        all_embeddings.extend(d.embedding for d in sorted_data)
-
-    return all_embeddings
-
-
 def ingest_document(db: Session, document: Document) -> int:
     """
     Full synchronous ingestion pipeline (DECISIONS.md 006):
@@ -103,6 +76,9 @@ def ingest_document(db: Session, document: Document) -> int:
     been embedded and added successfully. On any failure, the document
     is marked FAILED and no partial Chunk rows are left behind - a failed
     document is safe to retry from scratch, never half-indexed.
+
+    Returns the number of chunks stored, so callers don't need a second
+    COUNT(*) query.
     """
     document.status = DocumentStatus.PROCESSING
     db.commit()
@@ -110,7 +86,7 @@ def ingest_document(db: Session, document: Document) -> int:
     try:
         elements = _partition(document.path)
         chunks = _chunk(elements)
-        embeddings = _embed_texts([c.text for c in chunks])
+        embeddings = embed_texts([c.text for c in chunks])
 
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
             page_start, page_end = _page_range(chunk)

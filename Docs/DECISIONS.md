@@ -134,3 +134,48 @@ answer), and the test document (scanned draft image + heavy license
 boilerplate) is not representative of typical user uploads.
 
 ---
+
+## 013 — Log full exception on ingestion failure; API response stays untyped (status: failed only)
+
+**Decision:** `ingest_document` logs the full exception (`logger.exception`, with `document_id`/`project_id` context) before re-raising. The router still catches broadly and returns `201` with `status: "failed"` for any failure — the API response doesn't distinguish a genuine code bug from an expected pipeline failure (bad PDF, embedding API error).
+
+**Alternatives considered:**
+- Typed exceptions (`PartitioningError`, `EmbeddingAPIError`, vs. unexpected) so the router could return different responses/status codes per failure category.
+
+**Why:** The broad `except Exception` in the router (see decision on 201-with-status-field response) means a real bug and a content-related failure currently look identical to the API client. Logging closes the *operator's* visibility gap cheaply — a full traceback plus document/project context is enough to tell "every document is failing with the same stack trace" (code bug) from "this one PDF failed" (content issue) by reading logs. Typed exceptions would let the *client* make that distinction too, but that's real design work (defining the exception taxonomy, deciding what each maps to in the response) with no v1 requirement forcing it yet. Revisit once real failure patterns are observed - premature to guess the right taxonomy now.
+
+---
+
+## 014 — Full conversation history resent every message; no summarization/windowing in v1
+
+**Decision:** Each chat turn sends the LLM the full persisted message history for that conversation (all prior `Message` rows, in order), not a summarized or windowed subset. No caching layer either.
+
+**Alternatives considered:**
+- Sliding window (last N messages only).
+- Running summarization of older turns, kept alongside recent raw messages.
+- Prompt caching (provider-level) to reduce repeated-prefix cost.
+
+**Why:** v1's conversations are expected to be short (single user, one project, testing the core loop) - token cost from resending full history is negligible at this scale. Summarization/windowing are real techniques with real trade-offs of their own (what gets lost in a summary, when a window boundary cuts off relevant earlier context) that shouldn't be guessed at without seeing real long-conversation usage. Same "no infra for scale we don't have" principle as elsewhere - revisit once conversation length or token cost actually becomes a problem, not before.
+
+---
+
+## 015 — Custom per-project system prompt deferred; v1 uses one hardcoded prompt
+
+**Decision:** v1's chat uses a single hardcoded `SYSTEM_PROMPT` (services/retrieval.py). No per-project custom prompt/instructions field in v1. When added (later version), the design is concatenation, not replacement: the hardcoded grounding/citation rules stay in force, and any user-supplied instructions get appended after them - never substituted in place of the citation contract.
+
+**Alternatives considered:**
+- Let a per-project custom prompt fully replace the system prompt.
+
+**Why:** Not implied by v1 requirements (no project settings concept exists yet - see decision 003's "settings later" note on the ER diagram). Full replacement would let a custom prompt silently drop the citation-marker instruction (decision 008) or the "don't answer from outside knowledge" grounding rule, breaking the core "cited answer" guarantee the whole product depends on. Concatenation preserves the non-negotiable contract while still allowing customization - append-only, not override.
+
+---
+
+## 016 — No duplicate-upload detection in v1, despite storing `checksum`
+
+**Decision:** `Document.checksum` (sha256, computed at upload) is stored but not checked against existing documents. Uploading the same PDF twice creates two separate `Document` rows and duplicate `Chunk` sets, both retrievable and citable independently.
+
+**Context:** Observed in testing - the same PDF uploaded twice caused answers to cite two chunks covering the same content from different documents (e.g. `chunk_46` + `chunk_8`, different storage paths), consuming two of the `top_k` retrieval slots for redundant content.
+
+**Why not fixed now:** Not a retrieval bug - retrieval and citation both worked correctly against what was actually indexed. It's a data-hygiene gap: nothing stops a duplicate upload from happening. `checksum` already exists specifically to make this fixable later (reject or warn on a repeat checksum within a project) without a schema change - just an endpoint-level check that hasn't been added yet. Deferred rather than fixed immediately since it's not blocking v1 DoD and the right UX (reject vs. warn vs. silently reuse the existing document) hasn't been decided.
+
+---

@@ -10,10 +10,18 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models.document import Document
 from app.models.enums import DocumentStatus
+from app.models.project import Project
 from app.schemas.document import DocumentRead
 from app.services.ingestion import ingest_document
 
 router = APIRouter(prefix="/projects/{project_id}/documents", tags=["documents"])
+
+
+def _get_project(db: Session, project_id: int) -> Project:
+    project = db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(404, "Project not found")
+    return project
 
 
 @router.post("", response_model=DocumentRead, status_code=status.HTTP_201_CREATED)
@@ -22,6 +30,8 @@ def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> DocumentRead:
+    _get_project(db, project_id)
+
     if file.content_type != "application/pdf":
         raise HTTPException(400, "Only PDF files are supported in v1")
 

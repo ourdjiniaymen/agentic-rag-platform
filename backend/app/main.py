@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 
+from app.api.conversations import router as conversations_router
 from app.api.documents import router as documents_router
 
 app = FastAPI(title="Agentic RAG Platform API", version="0.1.0")
 
 app.include_router(documents_router)
+app.include_router(conversations_router)
 
 
 @app.get("/health")
