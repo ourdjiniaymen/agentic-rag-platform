@@ -14,6 +14,12 @@ class Settings(BaseSettings):
 
     storage_root: str = "/app/storage"
 
+    # v1 has no auth/login (DECISIONS.md 011) - every row still needs a
+    # user_id, so we pin it to a seeded row created via Alembic/fixture
+    # rather than hardcoding the literal id inline at each call site.
+    seed_user_id: int = 1
+    seed_project_id: int = 1
+
     # chunk_by_title params — tunable without touching service code.
     # Starting values for prose-heavy PDFs; revisit once real documents
     # are seen.

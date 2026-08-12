@@ -17,7 +17,6 @@ class Document(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
-    uploaded_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
     path: Mapped[str] = mapped_column(String)
     filename: Mapped[str] = mapped_column(String)
