@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy.orm import Session
 from unstructured.chunking.title import chunk_by_title
 from unstructured.documents.elements import Element
@@ -8,9 +10,9 @@ from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.enums import DocumentStatus
 from app.services.embeddings import embed_texts
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 def _partition(path: str) -> list[Element]:
     """
@@ -106,17 +108,13 @@ def ingest_document(db: Session, document: Document) -> int:
         db.commit()
         return len(chunks)
     except Exception as exc:
+        document_id, project_id = document.id, document.project_id
         db.rollback()
         document.status = DocumentStatus.FAILED
         db.commit()
-
         logger.exception(
             "Document ingestion failed: %s",
             exc,
-            extra={
-                "document_id": document.id,
-                "project_id": document.project_id,
-            },
+            extra={"document_id": document_id, "project_id": project_id},
         )
-
         raise

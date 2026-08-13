@@ -4,10 +4,12 @@ import os
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pypdf import PdfReader
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.session import get_db
+from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.enums import DocumentStatus
 from app.models.project import Project
@@ -22,6 +24,13 @@ def _get_project(db: Session, project_id: int) -> Project:
     if project is None:
         raise HTTPException(404, "Project not found")
     return project
+
+
+def _to_document_read(document: Document, chunk_count: int) -> dict:
+    return {
+        **DocumentRead.model_validate(document).model_dump(exclude={"chunk_count"}),
+        "chunk_count": chunk_count,
+    }
 
 
 @router.post("", response_model=DocumentRead, status_code=status.HTTP_201_CREATED)
@@ -40,6 +49,18 @@ def upload_document(
         raise HTTPException(400, "Uploaded file is empty")
 
     checksum = hashlib.sha256(raw).hexdigest()
+
+    existing = (
+        db.query(Document)
+        .filter(Document.project_id == project_id, Document.checksum == checksum)
+        .first()
+    )
+    if existing is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"This file was already uploaded as document {existing.id} "
+            f"({existing.filename}, status={existing.status.value})",
+        )
 
     try:
         page_count = len(PdfReader(io.BytesIO(raw)).pages)
@@ -90,7 +111,27 @@ def upload_document(
 
     db.refresh(document)
 
-    return {
-        **DocumentRead.model_validate(document).model_dump(exclude={"chunk_count"}),
-        "chunk_count": chunk_count,
-    }
+    return _to_document_read(document, chunk_count)
+
+
+@router.get("", response_model=list[DocumentRead])
+def list_documents(project_id: int, db: Session = Depends(get_db)) -> list[dict]:
+    _get_project(db, project_id)
+
+    documents = (
+        db.query(Document)
+        .filter(Document.project_id == project_id)
+        .order_by(Document.created_at)
+        .all()
+    )
+    if not documents:
+        return []
+
+    counts = dict(
+        db.execute(
+            select(Chunk.document_id, func.count())
+            .where(Chunk.document_id.in_([d.id for d in documents]))
+            .group_by(Chunk.document_id)
+        ).all()
+    )
+    return [_to_document_read(d, counts.get(d.id, 0)) for d in documents]

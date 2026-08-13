@@ -170,10 +170,11 @@ def answer_question(db: Session, conversation: Conversation, question: str) -> M
         db.refresh(assistant_message)
         return assistant_message
     except Exception as exc:
+        conv_id, proj_id = conversation.id, conversation.project_id
         db.rollback()
         logger.exception(
             "Chat turn failed: %s",
             exc,
-            extra={"conversation_id": conversation.id, "project_id": conversation.project_id},
+            extra={"conversation_id": conv_id, "project_id": proj_id},
         )
         raise

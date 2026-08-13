@@ -178,4 +178,16 @@ boilerplate) is not representative of typical user uploads.
 
 **Why not fixed now:** Not a retrieval bug - retrieval and citation both worked correctly against what was actually indexed. It's a data-hygiene gap: nothing stops a duplicate upload from happening. `checksum` already exists specifically to make this fixable later (reject or warn on a repeat checksum within a project) without a schema change - just an endpoint-level check that hasn't been added yet. Deferred rather than fixed immediately since it's not blocking v1 DoD and the right UX (reject vs. warn vs. silently reuse the existing document) hasn't been decided.
 
+**Resolved:** `POST /projects/{id}/documents` now checks `checksum` against existing documents in the same project and rejects with `409 Conflict` (pointing at the existing document's id/filename/status) rather than silently reusing or duplicating. Reject was chosen over silent reuse because a duplicate upload attempt is meaningful signal to surface to the client, not something to paper over.
+
+---
+
+## 017 — Load/concurrency and ragas comparison tests deferred to v2
+
+**Decision:** v1's test suite (pytest, `backend/tests/`) covers correctness only: API integration tests (with mocked OpenAI + mocked partitioning) and unit tests for pure logic (embedding order-safety, citation marker parsing, page-range derivation). No load/concurrency tests and no ragas-based quality eval in v1.
+
+**Why:** Load/concurrency tests would be testing against v1's known-synchronous ingestion (DECISIONS.md 006) and single-user assumption - there's no concurrent-load scenario v1 is designed to handle yet, so a load test today would only confirm what's already known by design, not surface new information. ragas (RAG-quality eval) is explicitly a later-version feature per PROJECT_OVERVIEW.md's target architecture, not scoped for v1.
+
+**Intent, not forgotten:** the plan is to establish load/concurrency and ragas baselines once async ingestion (Celery) and/or retrieval tuning are actually built, specifically so v2 changes can be measured against a real v1 baseline rather than guessed at. Revisit at that point, not before.
+
 ---
