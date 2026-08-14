@@ -191,3 +191,26 @@ boilerplate) is not representative of typical user uploads.
 **Intent, not forgotten:** the plan is to establish load/concurrency and ragas baselines once async ingestion (Celery) and/or retrieval tuning are actually built, specifically so v2 changes can be measured against a real v1 baseline rather than guessed at. Revisit at that point, not before.
 
 ---
+
+## 018 — v1 hardening gaps not yet addressed (not oversights, not prod-ready as-is)
+
+**Decision:** Log the following as known, deliberate v1 gaps rather than leave them undocumented. Not fixed now; each needs its own scoping before being built, not a quick patch.
+
+- **No auth, no rate limiting, no request size limits** on any endpoint (upload especially) - acceptable for a single-user local v1 (DECISIONS.md 011), not acceptable exposed beyond that. Real fix arrives with auth (Clerk), not before.
+- **No retry/backoff on OpenAI calls** (embeddings or chat) - a transient network/rate-limit error fails the whole ingestion or chat turn outright. Production systems wrap these in retry logic (exponential backoff, at minimum for rate-limit responses); v1 doesn't.
+- **No CI** - tests exist and pass locally (see 017) but nothing runs them automatically on push/PR. Unlike the other items here, this is a plain gap, not a scoped-out feature - cheap to add whenever.
+- **No enforced linting/type-checking** (e.g. `ruff`, `mypy`) in CI or pre-commit - code quality currently depends on manual review catching issues (a missing `logger` import and a bulk-`update()` bug both slipped through undetected until tests were actually run).
+
+**Why not fixed now:** None of these block the v1 DoD (upload -> indexed -> ask -> cited answer, single local user). Auth/rate-limiting is real design work tied to the Clerk integration, not a quick add. Retry/backoff needs a real policy decision (which errors retry, how many attempts, backoff shape) rather than a guessed default. CI and lint/type-check enforcement are the cheapest to add of this group and could reasonably be picked up before v2 rather than deferred alongside the others - logged together here since none were addressed yet, not because they're equally hard.
+
+---
+
+## 019 — Chat turn failures return raw 500, unlike ingestion's 201-with-status
+
+**Decision:** `POST /conversations/{id}/messages` lets an unhandled exception from `answer_question` propagate as a plain `500`, rather than following the pattern used for document ingestion (decision on 201-with-status-field for pipeline failures).
+
+**Why not made symmetric with ingestion:** `Document` has a `status` field precisely to represent "this failed, here's the row anyway" as a first-class domain state. `Message`/`Conversation` don't - inventing one just to make the failure response shape symmetric would mean designing new schema (a status field with no other use) purely for error presentation, not because chat has an equivalent "partially succeeded" state to represent (the user's question is either answered or it isn't; there's no useful partial state to persist). Retrieval already rolls back the user's question on failure (DECISIONS.md, chat-turn rollback), so no orphaned data - the only gap is the response shape a client sees.
+
+**Accepted for v1:** matches decision 013's stance - log instead of building typed-exception/response-taxonomy infrastructure prematurely. Revisit if/when a real product need appears (e.g. showing the user "that failed, try again" distinctly from a generic error).
+
+---

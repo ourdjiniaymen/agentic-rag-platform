@@ -96,7 +96,6 @@ def upload_document(
 
     document.path = path
     db.commit()
-    db.refresh(document)
 
     try:
         chunk_count = ingest_document(db, document)
@@ -110,7 +109,6 @@ def upload_document(
         chunk_count = 0
 
     db.refresh(document)
-
     return _to_document_read(document, chunk_count)
 
 
