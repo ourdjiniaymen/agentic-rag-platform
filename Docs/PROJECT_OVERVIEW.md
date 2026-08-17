@@ -9,7 +9,7 @@ Inspired publicly by Harish Neel's "Six-Figure RAG" course curriculum (used only
 No version has shipped yet. v1 scoping/design is complete — see `v1-requirements.md` and `DECISIONS.md`. Build has not started.
 
 ## Target architecture (north star — not all needed for v1)
-- **Frontend:** Next.js, TypeScript, Tailwind CSS, Clerk (auth)
+- **Frontend:** React js, Clerk (auth)
 - **Backend:** Python, FastAPI, Celery + Redis (async job queue)
 - **Data:** PostgreSQL + pgvector, AWS S3 for raw files
 - **AI/RAG:** Unstructured.io (partitioning), LangChain, LangGraph (supervisor agent pattern — routes between RAG tool and web-search tool), OpenAI (LLM + embeddings), Guardrails AI (PII redaction, prompt-injection defense, output validation)
@@ -34,7 +34,7 @@ No version has shipped yet. v1 scoping/design is complete — see `v1-requiremen
 - Decisions (especially deferrals) get written down, not silently skipped — see `DECISIONS.md`
 
 ## v1 scope
-See `v1-requirements.md` for the full v1 slice, definition of done, and out-of-scope list. In short: single project, single user, PDF-only, Simple RAG (no web search/agent), plain vector retrieval, synchronous ingestion, local disk storage, cited chat answers via marker-based references — API-first (FastAPI), Next.js frontend after.
+See `v1-requirements.md` for the full v1 slice, definition of done, and out-of-scope list. In short: single project, single user, PDF-only, Simple RAG (no web search/agent), plain vector retrieval, synchronous ingestion, local disk storage, cited chat answers via marker-based references — API-first (FastAPI), React.js frontend after.
 
 ## Related files
 - `v1-requirements.md` — v1 scope, definition of done

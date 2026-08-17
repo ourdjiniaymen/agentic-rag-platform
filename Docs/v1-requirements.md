@@ -12,7 +12,7 @@ Prove the core loop end-to-end: upload a document, get it processed, chat with c
 
 **Ingestion**
 - Upload → partition → chunk → embed → store
-- Some processing state on each document (`uploaded → processing → ready → failed`) so the app knows when a doc is queryable
+- Some processing state on each document (`pending → processing → indexed → failed`) so the app knows when a doc is queryable
 - Pipeline can run synchronously / simplified — full async job visibility (Celery, per-stage UI) is not required yet
 
 **Retrieval & chat**
@@ -56,7 +56,7 @@ A user can:
 ## Build sequencing
 Both API and frontend are in v1 scope, built in two phases:
 1. **API first** — FastAPI backend, all v1 endpoints (upload, ingestion status, chat) working and testable (e.g. via curl/Postman) before any UI exists. The API contract drives the frontend, not the reverse.
-2. **Frontend after** — minimal Next.js UI consuming the API once it's stable. No frontend work starts until phase 1 is functionally complete.
+2. **Frontend after** — minimal React.js UI consuming the API once it's stable. No frontend work starts until phase 1 is functionally complete.
 
 ## Open questions to resolve before/during build
 - Data model (projects, documents, chunks, users) — ER diagram next
