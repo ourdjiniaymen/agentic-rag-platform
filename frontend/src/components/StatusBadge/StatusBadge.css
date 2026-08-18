@@ -1,0 +1,23 @@
+.status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-badge--indexed {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.status-badge--processing,
+.status-badge--pending {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.status-badge--failed {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
