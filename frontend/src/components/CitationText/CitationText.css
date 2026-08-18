@@ -1,0 +1,31 @@
+.citation-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.citation-marker {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.75em;
+  vertical-align: super;
+  padding: 0 2px;
+  font-weight: 600;
+}
+
+.citation-popover {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 6px;
+  background: var(--color-text);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+}
