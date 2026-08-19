@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     env_file:
-      - .env
+      - ./backend/.env.development
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
       TEST_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@test_db:5432/${POSTGRES_DB}_test
@@ -36,6 +36,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    
+    
+
 
 volumes:
   pgdata_test:
