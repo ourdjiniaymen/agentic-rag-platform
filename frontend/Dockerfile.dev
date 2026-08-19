@@ -1,0 +1,23 @@
+# Dev-only image. Not used in prod - see Dockerfile.prod for that.
+#
+# Source is expected to be mounted as a volume at runtime (see the
+# docker run / compose command below), so COPY here only brings in
+# what's needed to install dependencies. Editing files on the host
+# hot-reloads inside the container via Vite's dev server.
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Source is NOT copied here on purpose - it's bind-mounted at runtime
+# so the container always reflects your local edits without rebuilding.
+
+EXPOSE 5173
+
+# --host is required so Vite's dev server accepts connections from
+# outside the container (default is localhost-only, which Docker's
+# network isolation would otherwise block).
+CMD ["npm", "run", "dev", "--", "--host"]
