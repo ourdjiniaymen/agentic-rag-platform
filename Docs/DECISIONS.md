@@ -214,3 +214,38 @@ boilerplate) is not representative of typical user uploads.
 **Accepted for v1:** matches decision 013's stance - log instead of building typed-exception/response-taxonomy infrastructure prematurely. Revisit if/when a real product need appears (e.g. showing the user "that failed, try again" distinctly from a generic error).
 
 ---
+## 020 — `Conversation.updated_at` doesn't bump on new messages
+
+**Decision:** Left as-is for v1, deferred to v2 rather than fixed now.
+
+**Context:** Discovered during frontend work - the conversation sidebar sorts by `created_at` instead of true "recent activity," since nothing touches the parent `Conversation` row when a `Message` is added to it. `onupdate=func.now()` on `Conversation.updated_at` never fires as a result.
+
+**Why not fixed now:** A real bug, not a design trade-off - but v1 is being closed at DoD rather than gold-plated further. The fix is small and contained (touch `conversation.updated_at` inside `answer_question` when persisting the assistant message) and doesn't require a schema change, so it's cheap to pick up at the start of v2 rather than reopening v1 for it.
+
+---
+
+## 021 — `Message.references` limited to filename + page range; no chunk text or file-serving in v1
+
+**Decision:** The citation payload returned to the frontend (`API.md`) exposes only `chunk_id, filename, file_type, file_path, start_page, end_page` - no chunk text/snippet, no highlighted span, and no endpoint to actually fetch/view the source file. The v1 frontend's citation UI (clickable popover) is built against this limited payload by necessity.
+
+**Alternatives considered:**
+- Include chunk `content` in `references` so the frontend could show a text preview without a second request.
+- A file-serving endpoint so citations could deep-link into the actual PDF page.
+
+**Why not decided now:** This is a real design question - how much to expose (snippet vs. full chunk vs. highlighted span vs. rendered PDF page) - not a bug, and not implied by v1's DoD ("cited answer" was satisfied by filename+page). Deciding it now, driven by a frontend nice-to-have rather than a real product requirement, risks guessing the wrong shape. Revisit in v2 alongside whatever the actual citation-UX bar turns out to be once real usage exists.
+
+---
+
+## v1 — Closed
+
+Both v1 definitions of done are met and verified against the running
+system:
+- **Backend** (`v1-requirements.md`): upload -> indexed -> ask -> cited
+  answer, via API.
+- **Frontend** (`v1-frontend-requirements.md`): upload/list documents,
+  create/list conversations, chat with clickable citations back to
+  source document + page - all from the UI alone.
+
+Known gaps (016-021 above, plus the hardening items in 018) are logged,
+not forgotten, and carry into v2 planning rather than blocking v1's
+close.
