@@ -24,6 +24,39 @@
   color: var(--color-text-muted);
 }
 
+.upload-status {
+  background-color: var(--color-info-bg);
+  color: var(--color-info-text);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  margin-top: 12px;
+  position: relative;
+}
+
+.upload-status--error {
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.upload-status--error::before {
+  content: "⚠";
+  margin: 8px;
+  font-size: 16px;
+}
+
+.upload-status--error .dismiss-btn {
+  color: var(--color-error-text);
+  background-color: transparent;
+  border: none;
+  font-size: 16px;
+  position: absolute;
+  right: 8px;
+  font-weight: 700;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .documents-card {
   margin-top: 24px;
   background: var(--color-surface);
